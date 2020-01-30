@@ -1,0 +1,63 @@
+Input files containing accession names/numbers should be provided according to these requirements.
+Using accession numbers is preferable as these are unique for each (accession, collector, sequencing source) combination. Currently, the accessions with multiple accession numbers are: Cnt-1, Kil-0
+
+- A file can only contain accession names only OR accession numbers only, not both.
+
+  ACCEPTABLE file 1:
+
+    8237
+    8386
+    10013
+
+  ACCEPTABLE file 2:
+
+    Kävlinge-1
+    Sr:5
+    Lerik1-3
+
+  UNACCEPTABLE file:
+
+    8237
+    Sr:5
+    10013
+
+- Each accession name or number must be on a new line
+
+  UNACCEPTABLE file 1:
+
+    8237,8386
+    10013
+
+  UNACCEPTABLE file 2:
+
+    Kävlinge-1
+    Sr:5        Lerik1-3
+
+- Accession names are CASE-INSENSITIVE, need not contain accented letters, and are insensitive to non-alphanumeric characters (i.e. non-alphanumeric characters are stripped before comparison). This also applies when using the -a/--acc flag. Do note, however, that spaces are NOT ALLOWED when using the -a/--acc flag, though they are acceptable when using the -i/--input flag.
+
+  Accession name: Kävlinge-1
+  Acceptable alternatives: Kavlinge-1, kävlinge1, kavlinge_1
+
+  Accession name: Sr:5
+  Acceptable alternatives: Sr5, sr-5, sr---5
+
+- When using --input-dir flag, please ensure that all files from which to read accessions are named according to ORF names. File extensions may be arbitrary. Gene versions are not necessary, though you can specify them if you are certain they are valid.
+
+  Acceptable file names: AT1G01010.txt, AT1G01010, AT1G01010.tsv, AT1G01010.1.idkman
+  Unacceptable file names: At1g01010.txt, at1g01010, at1g01010.1.tsv
+  Grey area: AT1G01010.1 (the version number will be stripped off in the absence of a file extension, and this file will be parsed as "AT1G01010")
+
+- When using --input-dir flag, please ensure that all files  from which to read accessions are not in subdirectories. Files in subdirectories will not be read.
+
+  Given "--input-dir /mnt/chaelab/some_user/tmp" and the following directory structure, only files "AT1G01010.txt", "AT1G01020", "AT1G01040.1.idkman" will be parsed.
+
+  /mnt/chaelab/some_user/tmp
+  +-- subdirectory1/
+  |   +-- AT1G01050.123
+  +-- subdirectory2/
+  |   +-- AT1G01060.1.txt
+  |   +-- AT1G01070
+  +-- AT1G01010.txt
+  +-- AT1G01020
+  +-- at1g01030.txt
+  +-- AT1G01040.1.idkman

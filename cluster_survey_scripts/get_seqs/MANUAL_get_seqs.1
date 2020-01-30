@@ -1,0 +1,214 @@
+.TH getSequences 1 "25 October 2019"
+.SH NAME
+getSeq \- extract sequences of gene features from 1001genomes (or the reference Col-0 genome)
+
+
+.SH SYNOPSIS
+.B getSeq
+{\fB--input-dir\fI dir\fR | [ { \fB\-a\fI string\fR | \fB\-i\fI file\fR } { \fB\-g\fI string\fR | [ \fB\-c\fI string \fB\-s\fI number \fB\-e\fI number\fR ] } ] }
+[\fIOPTION\fP]\&.\|.\|.\&
+
+
+.SH DESCRIPTION
+.B getSeq
+extracts sequences of gene features from specified accessions in 1001genomes' 1135 final list (or the Col-0 reference genome) into a fasta file
+.SS Tutorial:
+See the following link (to a Google slide) for a more visual (condensed) tutorial:
+https://tinyurl.com/y25vhm7y
+.SS Exit status:
+.TP
+.B 0
+if OK,
+.TP
+.B 1
+if arguments are invalid.
+
+
+.SH OPTIONS
+.SS Generic Program Information
+.TP
+.B \-h "," \-\-help
+Print this manual and exit.
+.TP
+.B \-\-readme
+Print README file containing information on example input formats (-i/--input flag).
+.SS Input Options
+.LP
+.B Accession and genome range (genes only) specification
+.LP
+Should NOT be used with -g/--gene, -a/--acc, -i/--input, or -c/--chrom and -s/--start and -e/--end.
+.TP
+.B \-\-input\-dir \fI dir
+Specifies a directory to read input accession names/numbers.
+See README for details on appropriate structure and naming.
+.LP
+.B Sequence range specification
+.LP
+Should NOT be used with --input-dir.
+.TP
+.B \-g "," \-\-gene \fI string
+Standard ORF name (e.g. AT1G01010).
+Supports comma-separated multi-gene input (e.g. AT1G01010,AT1G01020,AT1G01030). No spaces allowed.
+Supports file input, where file contains gene names delimited by newline.
+Should NOT be used with -c/--chrom and -s/--start and -e/--end.
+.TP
+.B \-c "," \-\-chrom \fI string
+Chromosome.
+Used with -s/--start AND -e/--end.
+Supports both 'Chr1' and '1' formats.
+Should NOT be used with -g/--gene.
+.TP
+.B \-s "," \-\-start \fI number
+Genome coordinate specifying start of range to extract.
+Used with -c/--chrom AND -e/--end.
+1-indexed.
+Should NOT be used with -g/--gene.
+.TP
+.B \-e "," \-\-end \fI number
+Genome coordinate specifying end of range to extract.
+Used with -c/--chrom AND -s/--start.
+1-indexed.
+Should NOT be used with -g/--gene.
+.LP
+.B Accession specification
+.LP
+Should NOT be used with --input-dir.
+.TP
+.B \-a "," \-\-acc \fI string
+Accession name (e.g. Lerik1-3) or number (e.g. 10013).
+Supports comma-separated multi-accession input (e.g. 6909,10013,10015). No spaces allowed.
+Should NOT be used with -i/--input.
+Reference sequences can be obtained using '-a ref' or '--acc ref'.
+See README for acceptable ways of representing accession names.
+.TP
+.B \-i "," \-\-input \fI file
+Specifies text file containing accession names or numbers (only names or numbers in a file, not both) delimited by newline.
+Should NOT be used with -a/--acc.
+See README for acceptable ways of representing accession names.
+.LP
+.B Feature specification
+.TP
+.B \-f "," \-\-feature \fI string
+Specifies a valid GFF3 feature type (e.g. exon, gene, CDS, mRNA) for which to extract variant information.
+Default is gene.
+Will be ignored if -c/--chrom and -s/--start and -e/--end are used.
+.TP
+.B \-\-domain \fI string
+Specifies the name of a domain to extract from sequences.
+If not provided, all entries in --domain-file will be assumed to specify the domain's range.
+Should be used with --domain-file and --qname-dname and --qstart-qend.
+.TP
+.B \-\-domain\-file \fI file
+Specifies a tab-delimited file (with header) containing information on domain start and end positions within reference Col-0 protein isoforms.
+Only sequences that fall within the specified domain ranges will be retained.
+Should be used with --qname-dname and --qstart-qend.
+.SS Output Control
+.LP
+.B Sequence options
+.TP
+.B \-\-adjust\-dir
+Reverse complements any sequences that are encoded on the minus strand.
+.TP
+.B \-\-translate
+Translates nucleotide sequences using standard amino acid code.
+Only applicable for executions using '[...] -a ref -f CDS [...]' AND where the --complete flag is not raised.
+.TP
+.B \-\-complete
+Retrieves continuous sequence from smallest coordinate of a feature to largest coordinate of a feature.
+For example, if '[...] -f CDS --complete [...]' is used, the final sequence will include run from the start of all CDS to the end of all CDS (per gene, if --merge is raised, else per isoform), including any introns in between.
+Overrides default behaviour, where default behaviour only concatenates ranges specified by GFF3 for a given eature in a given gene or isoform and excludes sequences not found within those ranges.
+.TP
+.B \-\-merge
+Combines all overlapping BED ranges for each gene.
+For example, if '[...] -f CDS --merge [...]' is used for a gene with 3 exons, where isoform 1 is made of exons A+B and isoform 2 is made of exons A+C, only one sequence, consisting of A+B+C, will be retrieved.
+Overrides defualt behaviour, where default behaviour only concatenates ranges belonging to the same isoform.
+.LP
+.B Output files/directories options
+.TP
+.B \-d "," \-\-dir \fI path
+Specifies directory to write output fasta file into.
+.TP
+.B \-o "," \-\-out \fI file
+Specifies a (new) file to write all sequences to (in FASTA format).
+Overrides default behaviour, where default behaviour writes sequences for each gene to separate files.
+.TP
+.B \-\-bed\-out \fI file
+Specifies a (new) file to write BED ranges of sequences to.
+Overrides default behaviour, where default behaviour writes BED ranges for each gene into separate files.
+.SS Lookup Files Control
+.TP
+.B \-b "," \-\-bed \fI file
+Specifies BED file derived from GFF3 file from which to extract feature ranges.
+.TP
+.B \-r "," \-\-reference \fI file
+Specifies a reference file where column 1 contains accession numbers and column 2 contains accession names.
+.TP
+.B \-\-no\-header
+Parses reference file with the assumption that there is no header row.
+.TP
+.B \-\-qname\-dname \fI string
+Should be used with --domain-file and --qstart-qend.
+Should be formatted as a Python tuple, where the first element is the name of the column containing query sequence names, and the second element is the name of the column containing domain names.
+Example: "('qname','dname')"
+.TP
+.B \-\-qstart\-qend \fI string
+Should be used with --domain-file and --qname-dname.
+Should be formatted as a Python tuple, where the first and second elements are the start and end positions (1-indexed, inclusive) respectivey of the domain in the query sequence.
+Example: "(1,300)"
+
+.SH EXAMPLES
+.TP
+1. Extract CDS sequence of all isoforms of a SINGLE gene (AT1G01010) of a SINGLE accession (10013, or Lerik1-3 here), translate it, and write fasta file to current working directory.
+
+getSeq -g AT1G01010 -d $(pwd) -f CDS -a 10013 --translate
+
+.B OR
+
+getSeq --gene AT1G01010 --dir $(pwd) -feature CDS -acc 10013 --translate
+.TP
+2. Extract merged exon sequence of a SINGLE gene (AT1G01010) of MULTIPLE accessions specified in a file ('/mnt/chaelab/some_user/some_accs.txt' here) and write fasta file to specified directory ('/mnt/chaelab/some_user/tmp' here).
+
+getSeq -g AT1G01010 -i /mnt/chaelab/some_user/some_accs.txt -d /mnt/chaelab/some_user/tmp -f exon --merge
+
+.B OR
+
+getSeq -g AT1G01010 --input /mnt/chaelab/some_user/some_accs.txt --dir /mnt/chaelab/some_user/tmp -feature exon --merge
+.TP
+3. Extract sequence of entire gene body of MULTIPLE genes of MULTIPLE accessions specified in directory ('/mnt/chaelab/some_user/some_genes' here) and write fasta file to specified directory ('/mnt/chaelab/some_user/tmp' here).
+
+getSeq --input-dir /mnt/chaelab/some_user/some_genes -d /mnt/chaelab/some_user/tmp
+
+.B OR
+
+getSeq --input-dir /mnt/chaelab/some_user/some_genes --dir /mnt/chaelab/some_user/tmp
+.TP
+4. Extract sequence from the specified genomic range (Chr1, 1-100000) from MULTIPLE accessions (6909,10013) and write fasta file to specified directory ('/mnt/chaelab/some_user/tmp').
+
+getSeq -c Chr1 -s 1 -e 100000 -a 6909,10013 -d /mnt/chaelab/some_user/tmp
+
+.B OR
+
+getSeq --chrom Chr1 --start 1 --end 100000 --acc 6909,10013 --dir /mnt/chaelab/some_user/tmp
+.TP
+5. Extract complete CDS from all isoforms of MULTIPLE genes (AT1G01010,AT1G01020) from MULTIPLE accessions (Col0,lerik1-3), adjust direction based on strand (--adjust-dir), and write fasta file to specified directory ('/mnt/chaelab/some_user/tmp').
+
+getSeq -g AT1G01010,AT1G01020 -a Col0,lerik1-3 --adjust-dir -d /mnt/chaelab/some_user/tmp -f CDS --complete
+
+.B OR
+
+getSeq --gene AT1G01010,AT1G01020 --acc Col0,lerik1-3 --adjust-dir --dir /mnt/chaelab/some_user/tmp --feature CDS --complete
+.TP
+6. Extract specified domain (TIR) from MULTIPLE genes (AT3G44400,AT3G44480,AT3G44630,AT3G44670) from multiple accessions (6909,10013), specifying domain ranges with a file ('/mnt/chaelab/some_user/some_domains.tsv'). Merge all output BED files into a single file ('/mnt/chaelab/some_user/some_ranges.bed'), and write all sequences to a single file ('/mnt/chaelab/some_user/some_seqs.fasta'). Temporary files will be written in the specified directory ('/mnt/chaelab/some_user/tmp').
+
+getSeq -g AT3G44400,AT3G44480,AT3G44630,AT3G44670 -a 6909,10013 --domain TIR --domain-file /mnt/chaelab/some_user/some_domains.tsv --qname-dname "('qseqid','sseqid')" --qstart-qend "('qstart','qend')" --bed-out /mnt/chaelab/some_user/some_ranges.bed -o /mnt/chaelab/some_user/some_seqs.fasta -d /mnt/chaelab/some_user/tmp
+
+.B OR
+
+getSeq --gene AT3G44400,AT3G44480,AT3G44630,AT3G44670 --acc 6909,10013 --domain TIR --domain-file /mnt/chaelab/some_user/some_domains.tsv --qname-dname "('qseqid','sseqid')" --qstart-qend "('qstart','qend')" --bed-out /mnt/chaelab/some_user/some_ranges.bed --out /mnt/chaelab/some_user/some_seqs.fasta --dir /mnt/chaelab/some_user/tmp
+
+.SH AUTHOR
+Written by Rachelle Lee
+
+
+.SH REPORTING BUGS
+Report bugs to e0336214@u.nus.edu
