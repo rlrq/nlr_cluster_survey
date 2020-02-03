@@ -16,7 +16,7 @@ The pipeline was executed with
 
 Third party command line tools
 - bedtools v2.26.0
-- blast 2.6.0
+- BLAST+ 2.6.0
 - mafft v7.427
 - FastTree 2.1
 
