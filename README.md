@@ -1,5 +1,7 @@
 # nlr_cluster_survey
 
+pipeline_cluster_survey.sh details the analysis pipeline up to but not including visualisation steps. Miscellaneous scripts required are included in the 'scripts' folder, and the directory structure should be preserved.
+
 Paths to update before execution
 - Variables at the top of pipeline_cluster_survey.sh
 - FASTA files in scripts/get_seqs/scripts/get_seqs_functions.py
