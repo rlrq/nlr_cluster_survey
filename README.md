@@ -35,3 +35,11 @@ Additional third party R packages for plotting and visualisation (script not yet
 - wesanderson 0.3.6
 - RColorBrewer 1.1.2
 - Biostrings 2.52.0
+- rlist 0.4.6.1
+- ape 5.3
+- ggsignif 0.6.0
+- ggpmisc 0.3.3
+- geiger 2.0.6.3
+- scales 1.1.0
+- ggtree 1.16.6
+- ggridges 0.5.2
