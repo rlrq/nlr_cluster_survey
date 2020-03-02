@@ -217,7 +217,7 @@ Rscript -e "source('${scripts_dir}/completeness.R'); b6_to_bed('${completeness_d
 ## intersect predicted 6909 with respective GFF3
 bedtools intersect -wo -a ${arath_pred_bed} -b ${arath_bed} > ${arath_pred_gff_bed}
 ## from intersected bed file, get only CDS and merge
-awk -F'\t' '{if ($19==CDS) {split($20,a,"."); split(a[1],g,"="); print $1"\t"$2"\t"$3"\t"$4"\t"g[2]}}' ${arath_pred_gff_bed} | bedtools sort | bedtools merge -c 4,5 -o distinct | head > ${arath_pred_gff_bed_cds}
+awk -F'\t' '{if ($19==CDS) {split($20,a,"."); split(a[1],g,"="); print $1"\t"$2"\t"$3"\t"$4"\t"g[2]}}' ${arath_pred_gff_bed} | bedtools sort | bedtools merge -c 4,5 -o distinct > ${arath_pred_gff_bed_cds}
 
 ## manipulate some more with completeness_nlr164.R, results would be easier to see with excel or libreoffice calc
 Rscript -e "source('${scripts_dir}/completeness.R'); summarise_pred_genes('${arath_pred_gff_bed}', '${arath_pred_gff_bed_cds}', '${arath_pred_tsv}', '${nlr164}')"
