@@ -1,6 +1,6 @@
 # nlr_cluster_survey
 
-(Note that the files currently in the repo reproduce the analysis in the manuscript before major revisions. Final scripts are to be uploaded in due time.)
+(Note that the files currently in the repo reproduce the analysis in the manuscript before major revisions. Final scripts are to be uploaded in due time.) (Now with CNVnator analysis for A. lyrata.)
 
 pipeline_cluster_survey.sh details the analysis pipeline up to but not including visualisation steps. Miscellaneous scripts required are included in the 'scripts' folder, and the directory structure should be preserved.
 
@@ -23,6 +23,8 @@ Third party command line tools
 - BLAST+ 2.6.0
 - mafft v7.427
 - FastTree 2.1
+- CNVnator
+  - Requires: Yeppp!
 
 Third party Python libraries
 - Biopython 1.73
