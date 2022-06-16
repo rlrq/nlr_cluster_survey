@@ -11,6 +11,7 @@ scripts_dir="${this_script_dir}/scripts" ## make sure scripts directory is in sa
 data_dir="${this_script_dir}/data" ## data directory; to be updated accordingly
 db_dir="${this_script_dir}/db" ## blastdb/rpsblastdb director; to be updated accordingly or removed if not needed
 results_dir="${this_script_dir}/results" ## output directory; to be modified if so desired
+novikova_dir="${data_dir}/Novikova_etal" ## directory containing Novikova et al. fastq files; to be updated accordingly
 
 mkdir -p "${results_dir}"
 
@@ -39,8 +40,19 @@ araly_bed="${data_dir}/Araly1_GeneModels_FilteredModels6.gff.bed" ## to be gener
 sed 's/; /;/g' ${araly_gff} | tr ' ' '=' > ${tmp_f}
 ${scripts_dir}/gff_to_bed.sh ${tmp_f} ${tmp_f2}
 grep -v '^#' ${tmp_f2} | awk 'NR > 1 {print}' > ${araly_bed}
-
 rm ${tmp_f} ${tmp_f2}
+## positions of A. lyrata NLR
+araly_nlr_txt=/path/to/Araly1_NLR_full.txt ## download from github repo and update accordingly
+
+## A. lyrata read data from Novikova et al.
+novikova_araly=/path/to/ploidy2_alyrata.tsv ## download from the github repo and update accordingly
+sras=( $( cut -f17 ${novikova_araly} | head -18 | tail -17 | tr '\n' ' ' ) )
+## If you haven't yet downloaded Novikova et al.'s fastq files, execute the following (files will be downloaded into ${novikova_dir} (defined at start of this script file); this requires 'fastq-dump' from the SRA toolkit
+for sra in ${sras[@]}; do
+    prefetch ${sra}
+    mv /home/rachelle/ncbi/public/sra/${sra}.sra ${novikova_dir}
+    fastq-dump --split-files --gzip -O ${novikova_dir} ${novikova_dir}/${sra}.sra
+done
 
 ## accession/gene/protein/cluster/domain names
 accs_map="${data_dir}/accID_AL70.tsv" ## supplementary table 1, in tsv format (w/ header)
@@ -59,6 +71,8 @@ makeblastdb -in "${vdw_contigs}" -dbtype nucl -out "${db_al}"
 get_seq="${scripts_dir}/get_seqs/get_seqs.sh -b ${arath_bed}" ## get_seqs execution
 ## NOTE: ${scripts_dir}/get_seqs/scripts/get_seqs_functions.py needs to be updated with path to FASTA file for each A. thaliana chromosome
 fast_tree="${scripts_dir}/FastTree" ## FastTree binary; to be updated accordingly
+yeppp_base=/path/to/yeppp/yeppp-1.0.0/ ## Yeppp! mathematical library, used for CNVnator; to be updated accordingly
+root_dir=/path/to/root/dir/ ## ROOT (https://root.cern/install/), used for CNVnator; to be updated accordingly
 
 ## other variables
 declare -A domains_a=( ['NB-ARC']='gnl|CDD|307194' ['TIR']='gnl|CDD|214587' ) ## domains + pssmid
@@ -217,7 +231,7 @@ Rscript -e "source('${scripts_dir}/completeness.R'); b6_to_bed('${completeness_d
 ## intersect predicted 6909 with respective GFF3
 bedtools intersect -wo -a ${arath_pred_bed} -b ${arath_bed} > ${arath_pred_gff_bed}
 ## from intersected bed file, get only CDS and merge
-awk -F'\t' '{if ($19==CDS) {split($20,a,"."); split(a[1],g,"="); print $1"\t"$2"\t"$3"\t"$4"\t"g[2]}}' ${arath_pred_gff_bed} | bedtools sort | bedtools merge -c 4,5 -o distinct > ${arath_pred_gff_bed_cds}
+awk -F'\t' '{if ($19==CDS) {split($20,a,"."); split(a[1],g,"="); print $1"\t"$2"\t"$3"\t"$4"\t"g[2]}}' ${arath_pred_gff_bed} | bedtools sort | bedtools merge -c 4,5 -o distinct | head > ${arath_pred_gff_bed_cds}
 
 ## manipulate some more with completeness_nlr164.R, results would be easier to see with excel or libreoffice calc
 Rscript -e "source('${scripts_dir}/completeness.R'); summarise_pred_genes('${arath_pred_gff_bed}', '${arath_pred_gff_bed_cds}', '${arath_pred_tsv}', '${nlr164}')"
@@ -314,3 +328,103 @@ python3 -c "import sys; sys.path.append('${scripts_dir}'); from within_cluster_d
 
 # ## see physical_distance.R for analysis
 
+
+#################
+##  A. lyrata  ##
+##     CNV     ##
+#################
+
+## align to reference A. lyrata genome
+araly_cnv_dir=${results_dir}/araly_cnv
+mkdir -p ${araly_cnv_dir}
+mkdir ${araly_cnv_dir}/sam ${araly_cnv_dir}/bam
+bwa index ${araly_fa} ## index reference
+samtools faidx ${araly_fa}
+threads=20
+for sra in ${sras[@]}; do
+    echo "Working on ${sra}"
+    fq_pref=${novikova_dir}/${sra}
+    sam_f=${araly_cnv_dir}/sam/${sra}.sam
+    bam_f=${araly_cnv_dir}/bam/${sra}.bam
+    bam_sorted_f=${araly_cnv_dir}/bam/${sra}.sorted.bam
+    echo "Running bwa"
+    bwa mem -v 2 -t ${threads} ${araly_fa} ${fq_pref}_1.fastq.gz ${fq_pref}_2.fastq.gz > ${sam_f}
+    echo "Converting SAM file to BAM file"
+    samtools view -S -b ${sam_f} > ${bam_f}
+    echo "Sorting BAM file"
+    samtools sort ${bam_f} -o ${bam_sorted_f}
+    echo "Indexing BAM file"
+    samtools index ${bam_sorted_f}
+    rm ${sam_f} ${bam_f}
+done
+
+## run CNVnator
+## get the environment ready...
+export YEPPPLIBDIR=${yeppp_base}/binaries/linux/x86_64
+export YEPPPINCLUDEDIR=${yeppp_base}/library/headers
+export LD_LIBRARY_PATH=$YEPPPLIBDIR:$LD_LIBRARY_PATH
+cd ${root_dir}
+source ./config/thisroot.sh
+cnvnator_dir=${araly_cnv_dir}/cnvnator
+cd ${cnvnator_dir}
+ln -s /mnt/chaelab/rachelle/programmes/samtools ${cnvnator_dir}/samtools
+ln -s /mnt/chaelab/rachelle/programmes/htslib ${cnvnator_dir}/htslib
+
+## run cnvnator
+araly_nlr_chrom=$(cut -f1 ${araly_nlr_txt} | sort | uniq | tr '\n' ' ')
+## extract individual chromosome sequences into .fa files (because cnvnator -his ... requires it :()
+araly_nlr_chrom_a=( ${araly_nlr_chrom} )
+for chrom in ${araly_nlr_chrom_a[@]}; do
+    python3 -c "import sys; sys.path.append('/mnt/chaelab/rachelle/src'); from fasta_manip import fasta_to_dict, dict_to_fasta; dict_to_fasta({k: v for k, v in fasta_to_dict('${araly_fa}').items() if k == '${chrom}'}, '${cnvnator_dir}/${chrom}.fa')"
+done
+## seems like this has got to be done for each sample separately :(
+binsize=500
+for sra in ${sras[@]}; do
+    echo "Processing ${sra}"
+    cnvnator_root_chrom=$( echo "-root ${cnvnator_dir}/aralyCNV_${sra}.root -chrom ${araly_nlr_chrom}" )
+    ## EXTRACT from BAM
+    echo "Extracting from BAM file"
+    cnvnator ${cnvnator_root_chrom} -tree ${araly_cnv_dir}/bam/${sra}.sorted.bam
+    ## HISTOGRAM
+    echo "Generating histogram"
+    cnvnator ${cnvnator_root_chrom} -his ${binsize} -d ${cnvnator_dir}
+    ## CALCULATE STATS
+    echo "Calculating stats"
+    cnvnator ${cnvnator_root_chrom} -stat ${binsize}
+    ## RD SIGNAL PARTITIONING
+    echo "Partitioning RD signal"
+    cnvnator ${cnvnator_root_chrom} -partition ${binsize}
+    ## CNV calling
+    echo "Calling CNV"
+    cnvnator ${cnvnator_root_chrom} -call ${binsize} > ${cnvnator_dir}/aralyCNV_called_${sra}.tsv
+    ## convert output file of CNV calling to bed file (well...technically only the first 3 columns will adhere to the bed fomat...); also, append SRA number to end of each row
+    fname=${cnvnator_dir}/aralyCNV_called_${sra}
+    python3 -c "f = open('${fname}.tsv', 'r'); data = [x[:-1].split('\t') for x in f.readlines()]; f.close(); data = [ [x[1].split(':')[0]] + [str(int(x[1].split(':')[1].split('-')[0]) - 1)] + [x[1].split(':')[1].split('-')[1]] + [x[0]] + x[2:] + ['${sra}'] for x in data]; f = open('${fname}.bed', 'w+'); f.write('\n'.join(['\t'.join(x) for x in data])); f.close()"
+done
+
+## bedtools intersect output with positions of canonical A. lyrata NLRs
+## BED1: all gff_bed entries for A. lyrata NLRs
+araly_nlr_map=${araly_cnv_dir}/Araly1_NLR_full.map
+araly_nlr_bed=${araly_cnv_dir}/Araly1_NLR_GFF3.bed
+araly_nbs_complete_bed=${araly_cnv_dir}/araly_NB-ARC_complete.bed
+araly_nbs_bed=${araly_cnv_dir}/araly_NB-ARC.bed
+python3 -c "import re; gff_bed = [x[:-1].split('\t') for x in open('${araly_bed}', 'r').readlines()]; nlr_pid = set(x[:-1].split('\t')[-1] for x in open('${araly_nlr_txt}', 'r').readlines()); nlr_gid = set(re.search('(?<=name=)[^;]+', x[-1]).group(0) for x in gff_bed if re.search('proteinId', x[-1]) and re.search('(?<=proteinId=)\d+', x[-1]).group(0) in nlr_pid); nlr_entries = [x for x in gff_bed if re.search('(?<=name=)[^;]+', x[-1]).group(0) in nlr_gid]; f = open('${araly_nlr_bed}', 'w+'); f.write('\n'.join(['\t'.join(x) for x in nlr_entries])); f.close(); mapped = sorted(tuple(set(tuple([re.search('(?<=proteinId=)\d+', x[-1]).group(0), re.search('(?<=name=)[^;]+', x[-1]).group(0)[1:-1]]) for x in nlr_entries if re.search('proteinId', x[-1])))); f = open('${araly_nlr_map}', 'w+'); f.write('\n'.join(['\t'.join(x) for x in mapped])); f.close()"
+## BED2: NB-ARC positions (complete)
+python3 -c "import sys; sys.path.append('/mnt/chaelab/rachelle/hap_tags/src/cluster_survey_scripts'); fasta = '${araly_fa}'; gff_bed = '${araly_bed}'; pid_field = 'proteinId'; domain_pid_f = lambda x: x.split('|')[2]; from get_lyrata_functions import *; get_cds('${tmp_f}', domain_f = '/mnt/chaelab/rachelle/hap_tags/results/nlr165/domain_Alyrata/ylg/araly1_NLR_protein.cdd.tsv', bed = gff_bed, fasta = fasta, domain = 'NB-ARC', adjust_dir = True, complete = True, protein_id_field = pid_field, domain_pid_f = domain_pid_f, restrict_pid_exact = True, bed_out = '${araly_nbs_bed_complete}', write_fasta = False)"
+## BED3: NB-ARC positions (CDS only)
+python3 -c "import sys; sys.path.append('/mnt/chaelab/rachelle/hap_tags/src/cluster_survey_scripts'); fasta = '${araly_fa}'; gff_bed = '${araly_bed}'; pid_field = 'proteinId'; domain_pid_f = lambda x: x.split('|')[2]; from get_lyrata_functions import *; get_cds('${tmp_f}', domain_f = '/mnt/chaelab/rachelle/hap_tags/results/nlr165/domain_Alyrata/ylg/araly1_NLR_protein.cdd.tsv', bed = gff_bed, fasta = fasta, domain = 'NB-ARC', adjust_dir = True, complete = False, protein_id_field = pid_field, domain_pid_f = domain_pid_f, restrict_pid_exact = True, bed_out = '${cnvnator_dir}/../araly_NB-ARC.bed', write_fasta = False)"
+
+cnv_nlr_bed=${cnvnator_dir}/aralyCNV_called_novikova14_NLR.bed
+cnv_nbs_bed=${cnvnator_dir}/aralyCNV_called_novikova14_NB-ARC.bed
+cnv_nbs_complete_bed=${cnvnator_dir}/aralyCNV_called_novikova14_NB-ARC_complete.bed
+for sra in ${sras[@]}; do
+    cnvnator_bed=${cnvnator_dir}/aralyCNV_called_${sra}.bed
+    bedtools intersect -wa -wb -a ${cnvnator_bed} -b ${araly_nlr_bed} | bedtools sort | uniq >> ${cnv_nlr_bed}
+    bedtools intersect -wa -wb -a ${cnvnator_bed} -b ${araly_nbs_bed} | bedtools sort | uniq >> ${cnv_nbs_bed}
+    bedtools intersect -wa -wb -a ${cnvnator_bed} -b ${araly_nbs_complete_bed} | bedtools sort | uniq >> ${cnv_nbs_complete_bed}
+done
+
+## for parsing cnv_nbs_bed and cnv_nbs_complete_bed
+cnv_nbs_summary=${cnvnator_dir}/aralyCNV_called_novikova14_NB-ARC_summary.tsv
+## this one separates NB-ARC domains even when in same gene
+python3 -c "import re; samples = ['$(echo ${sras[@]} | sed 's/ /\x27,\x27/g')']; gff_bed = [x[:-1].split('\t') for x in open('${cnv_nbs_bed}', 'r').readlines()]; stats_d = {domain: {cnv: set(tuple(x) for x in gff_bed if domain == x[-1] and x[3] == cnv) for cnv in ['deletion', 'duplication']} for domain in [x[-1] for x in gff_bed]}; [print(k, '\tdeletion:', len(set(x[11] for x in v['deletion'])), '\tduplication:', len(set(x[11] for x in v['duplication']))) for k, v in stats_d.items()]; output = [['proteinId', 'domainId', 'deletion', 'duplication']] + [[re.search('^\d+', k).group(0), k, ';'.join(set(','.join([x[11], x[5]]) for x in v['deletion'])), ';'.join(set(','.join([x[11], x[5]]) for x in v['duplication']))] for k, v in stats_d.items()]; f = open('${cnv_nbs_summary}', 'w+'); f.write('\n'.join(['\t'.join(x) for x in output])); f.close()"
