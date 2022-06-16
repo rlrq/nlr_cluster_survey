@@ -47,10 +47,11 @@ araly_nlr_txt=/path/to/Araly1_NLR_full.txt ## download from github repo and upda
 ## A. lyrata read data from Novikova et al.
 novikova_araly=/path/to/ploidy2_alyrata.tsv ## download from the github repo and update accordingly
 sras=( $( cut -f17 ${novikova_araly} | head -18 | tail -17 | tr '\n' ' ' ) )
+ncbi_sra_download_dir=/path/to/ncbi/public/sra/ ## to be updated accordingly
 ## If you haven't yet downloaded Novikova et al.'s fastq files, execute the following (files will be downloaded into ${novikova_dir} (defined at start of this script file); this requires 'fastq-dump' from the SRA toolkit
 for sra in ${sras[@]}; do
     prefetch ${sra}
-    mv /home/rachelle/ncbi/public/sra/${sra}.sra ${novikova_dir}
+    mv ${ncbi_sra_download_dir}/${sra}.sra ${novikova_dir} ## update accordigly
     fastq-dump --split-files --gzip -O ${novikova_dir} ${novikova_dir}/${sra}.sra
 done
 
