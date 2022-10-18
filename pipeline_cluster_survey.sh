@@ -324,8 +324,8 @@ python3 -c "import sys; sys.path.append('${scripts_dir}'); from within_cluster_d
 # ##  CLUSTER DISTANCE   ##
 # #########################
 
-# nlr_bed=/mnt/chaelab/rachelle/hap_tags/results/nlr164/nlr164_final_wPred_GFF3.bed
-# grep -f /mnt/chaelab/rachelle/hap_tags/results/nlr164/nlr164_final_wPred.txt ${arath_bed} | awk '$8=="gene"||$8=="pseudogene"' > ${nlr_bed}
+# nlr_bed=${results_dir}/nlr164_final_wPred_GFF3.bed
+# grep -f ${results_dir}/nlr164/nlr164_final_wPred.txt ${arath_bed} | awk '$8=="gene"||$8=="pseudogene"' > ${nlr_bed}
 
 # ## see physical_distance.R for analysis
 
@@ -368,15 +368,15 @@ cd ${root_dir}
 source ./config/thisroot.sh
 cnvnator_dir=${araly_cnv_dir}/cnvnator
 cd ${cnvnator_dir}
-ln -s /mnt/chaelab/rachelle/programmes/samtools ${cnvnator_dir}/samtools
-ln -s /mnt/chaelab/rachelle/programmes/htslib ${cnvnator_dir}/htslib
+ln -s /path/to/samtools ${cnvnator_dir}/samtools ## update /path/to/samtools appropriately
+ln -s /path/to/htslib ${cnvnator_dir}/htslib ## update /path/to/samtools appropriately
 
 ## run cnvnator
 araly_nlr_chrom=$(cut -f1 ${araly_nlr_txt} | sort | uniq | tr '\n' ' ')
 ## extract individual chromosome sequences into .fa files (because cnvnator -his ... requires it :()
 araly_nlr_chrom_a=( ${araly_nlr_chrom} )
 for chrom in ${araly_nlr_chrom_a[@]}; do
-    python3 -c "import sys; sys.path.append('/mnt/chaelab/rachelle/src'); from fasta_manip import fasta_to_dict, dict_to_fasta; dict_to_fasta({k: v for k, v in fasta_to_dict('${araly_fa}').items() if k == '${chrom}'}, '${cnvnator_dir}/${chrom}.fa')"
+    python3 -c "import sys; sys.path.append('${scripts_dir}'); from fasta_manip import fasta_to_dict, dict_to_fasta; dict_to_fasta({k: v for k, v in fasta_to_dict('${araly_fa}').items() if k == '${chrom}'}, '${cnvnator_dir}/${chrom}.fa')"
 done
 ## seems like this has got to be done for each sample separately :(
 binsize=500
@@ -411,9 +411,9 @@ araly_nbs_complete_bed=${araly_cnv_dir}/araly_NB-ARC_complete.bed
 araly_nbs_bed=${araly_cnv_dir}/araly_NB-ARC.bed
 python3 -c "import re; gff_bed = [x[:-1].split('\t') for x in open('${araly_bed}', 'r').readlines()]; nlr_pid = set(x[:-1].split('\t')[-1] for x in open('${araly_nlr_txt}', 'r').readlines()); nlr_gid = set(re.search('(?<=name=)[^;]+', x[-1]).group(0) for x in gff_bed if re.search('proteinId', x[-1]) and re.search('(?<=proteinId=)\d+', x[-1]).group(0) in nlr_pid); nlr_entries = [x for x in gff_bed if re.search('(?<=name=)[^;]+', x[-1]).group(0) in nlr_gid]; f = open('${araly_nlr_bed}', 'w+'); f.write('\n'.join(['\t'.join(x) for x in nlr_entries])); f.close(); mapped = sorted(tuple(set(tuple([re.search('(?<=proteinId=)\d+', x[-1]).group(0), re.search('(?<=name=)[^;]+', x[-1]).group(0)[1:-1]]) for x in nlr_entries if re.search('proteinId', x[-1])))); f = open('${araly_nlr_map}', 'w+'); f.write('\n'.join(['\t'.join(x) for x in mapped])); f.close()"
 ## BED2: NB-ARC positions (complete)
-python3 -c "import sys; sys.path.append('/mnt/chaelab/rachelle/hap_tags/src/cluster_survey_scripts'); fasta = '${araly_fa}'; gff_bed = '${araly_bed}'; pid_field = 'proteinId'; domain_pid_f = lambda x: x.split('|')[2]; from get_lyrata_functions import *; get_cds('${tmp_f}', domain_f = '/mnt/chaelab/rachelle/hap_tags/results/nlr165/domain_Alyrata/ylg/araly1_NLR_protein.cdd.tsv', bed = gff_bed, fasta = fasta, domain = 'NB-ARC', adjust_dir = True, complete = True, protein_id_field = pid_field, domain_pid_f = domain_pid_f, restrict_pid_exact = True, bed_out = '${araly_nbs_bed_complete}', write_fasta = False)"
+python3 -c "import sys; sys.path.append('${scripts_dir}'); fasta = '${araly_fa}'; gff_bed = '${araly_bed}'; pid_field = 'proteinId'; domain_pid_f = lambda x: x.split('|')[2]; from get_lyrata_functions import *; get_cds('${tmp_f}', domain_f = '${lyrata_ylg_cdd_pref}.tsv', bed = gff_bed, fasta = fasta, domain = 'NB-ARC', adjust_dir = True, complete = True, protein_id_field = pid_field, domain_pid_f = domain_pid_f, restrict_pid_exact = True, bed_out = '${araly_nbs_bed_complete}', write_fasta = False)"
 ## BED3: NB-ARC positions (CDS only)
-python3 -c "import sys; sys.path.append('/mnt/chaelab/rachelle/hap_tags/src/cluster_survey_scripts'); fasta = '${araly_fa}'; gff_bed = '${araly_bed}'; pid_field = 'proteinId'; domain_pid_f = lambda x: x.split('|')[2]; from get_lyrata_functions import *; get_cds('${tmp_f}', domain_f = '/mnt/chaelab/rachelle/hap_tags/results/nlr165/domain_Alyrata/ylg/araly1_NLR_protein.cdd.tsv', bed = gff_bed, fasta = fasta, domain = 'NB-ARC', adjust_dir = True, complete = False, protein_id_field = pid_field, domain_pid_f = domain_pid_f, restrict_pid_exact = True, bed_out = '${cnvnator_dir}/../araly_NB-ARC.bed', write_fasta = False)"
+python3 -c "import sys; sys.path.append('${scripts_dir}'); fasta = '${araly_fa}'; gff_bed = '${araly_bed}'; pid_field = 'proteinId'; domain_pid_f = lambda x: x.split('|')[2]; from get_lyrata_functions import *; get_cds('${tmp_f}', domain_f = '${lyrata_ylg_cdd_pref}.tsv', bed = gff_bed, fasta = fasta, domain = 'NB-ARC', adjust_dir = True, complete = False, protein_id_field = pid_field, domain_pid_f = domain_pid_f, restrict_pid_exact = True, bed_out = '${cnvnator_dir}/../araly_NB-ARC.bed', write_fasta = False)"
 
 cnv_nlr_bed=${cnvnator_dir}/aralyCNV_called_novikova14_NLR.bed
 cnv_nbs_bed=${cnvnator_dir}/aralyCNV_called_novikova14_NB-ARC.bed
