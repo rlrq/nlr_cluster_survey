@@ -15,6 +15,7 @@ dir_results <- "" ## update accordingly. Should be the same path as stored in 'r
 
 ## files
 fname_table_s11 <- "/path/to/table/s11.tsv" ## extract table S11 to tab-separated file and update path accordingly
+fname_acc_relict <-"/path/to/accID_relict.tsv" ## download accID_relict.tsv from the github repo and update accordingly
 fname_acc_legacy <- "/path/to/383Legacy.tsv" ## download 383Legacy.tsv from the github repo and update accordingly
 fname_acc_1135 <- "/path/to/1135acc.csv" ## download 1135acc.csv from the github repo and update accordingly
 fname_vdw_arch <- "/path/to/vdw_arch.tsv" ## Table S2f from Van de Weyer et al. (2019). Download vdw_arch.tsv from the github repo and update accordingly
@@ -302,7 +303,7 @@ ggsave_2s <- function(p, fname, h, s, ...){ggsave(make_plot_loc(fname), p, heigh
 ##########################
 
 ## accession information
-acc_relict <- read.table("/path/to/accID_relict.tsv", sep = '\t', header = FALSE)[,1] ## update accordingly with path to accID_relict.tsv clone from the repo
+acc_relict <- read.table(fname_acc_relict, sep = '\t', header = FALSE)[,1] ## update accordingly with path to accID_relict.tsv clone from the repo
 acc_map <- read.table(fname_table_s11,
                       sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
     mutate(accID = as.character(accID), accID_old = as.character(accID_old),
