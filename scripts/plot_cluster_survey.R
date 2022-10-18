@@ -907,7 +907,7 @@ for (d in unique(dat_pred_sum$domain)){
 ##  A. lyrata CNV  ##
 #####################
 
-acc_novikova <- read.table("/home/rachelle/data/Alyrata/Novikova_etal/ploidy2_alyrata.tsv",
+acc_novikova <- read.table(fname_ploidy2_alyrata,
                            sep = '\t', stringsAsFactors = FALSE, header = TRUE) %>%
     mutate(subspecies = str_extract(sample, "(?<=Alyrata)[^\\d]+"))
 

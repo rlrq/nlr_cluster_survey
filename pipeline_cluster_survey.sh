@@ -75,6 +75,10 @@ fast_tree="${scripts_dir}/FastTree" ## FastTree binary; to be updated accordingl
 yeppp_base=/path/to/yeppp/yeppp-1.0.0/ ## Yeppp! mathematical library, used for CNVnator; to be updated accordingly
 root_dir=/path/to/root/dir/ ## ROOT (https://root.cern/install/), used for CNVnator; to be updated accordingly
 
+## package scripts (for CNVnator)
+dir_samtools=/path/to/samtools/dir/ ## to be updated accordingly
+dir_htslib=/path/to/htslib/dir/ ## to be updated accordingly
+
 ## other variables
 declare -A domains_a=( ['NB-ARC']='gnl|CDD|307194' ['TIR']='gnl|CDD|214587' ) ## domains + pssmid
 
@@ -367,8 +371,8 @@ cd ${root_dir}
 source ./config/thisroot.sh
 cnvnator_dir=${araly_cnv_dir}/cnvnator
 cd ${cnvnator_dir}
-ln -s /path/to/samtools ${cnvnator_dir}/samtools ## update /path/to/samtools appropriately
-ln -s /path/to/htslib ${cnvnator_dir}/htslib ## update /path/to/samtools appropriately
+ln -s ${dir_samtools} ${cnvnator_dir}/samtools
+ln -s ${dir_htslib} ${cnvnator_dir}/htslib
 
 ## run cnvnator
 araly_nlr_chrom=$(cut -f1 ${araly_nlr_txt} | sort | uniq | tr '\n' ' ')

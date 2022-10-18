@@ -6,7 +6,8 @@ pipeline_cluster_survey.sh details the analysis pipeline up to but not including
 
 Paths to update before execution
 - Variables at the top of pipeline_cluster_survey.sh
-- FASTA files in scripts/get_seqs/scripts/get_seqs_functions.py
+- Variables at the top of plot_cluster_survey.R
+- Paths to FASTA files in scripts/get_seqs/scripts/get_seqs_functions.py
 
 Manual steps
 - The NB-ARC tree should be manually rooted by assigning the division between TIR and non-TIR NLRs as the most basal before proceeding with the "assign genes" step.
