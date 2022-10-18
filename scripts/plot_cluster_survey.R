@@ -1,6 +1,3 @@
-source("/home/rachelle/scripts/str_manip.R")
-## source("/home/rachelle/scripts/vis_contigs/vis_contig_hits.R")
-
 library(tidyverse)
 
 library(grid)
@@ -12,6 +9,37 @@ library(RColorBrewer)
 library(Biostrings)
 
 library(data.table)
+
+dir_output <- "" ## update accordingly
+dir_results <- "" ## update accordingly. Should be the same path as stored in 'results_dir' variable in pipeline_cluster_survey.sh
+
+## files
+fname_table_s11 <- "/path/to/table/s11.tsv" ## extract table S11 to tab-separated file and update path accordingly
+fname_acc_legacy <- "/path/to/383Legacy.tsv" ## download 383Legacy.tsv from the github repo and update accordingly
+fname_acc_1135 <- "/path/to/1135acc.csv" ## download 1135acc.csv from the github repo and update accordingly
+fname_vdw_arch <- "/path/to/vdw_arch.tsv" ## Table S2f from Van de Weyer et al. (2019). Download vdw_arch.tsv from the github repo and update accordingly
+fname_members <- "/path/to/members.tsv" ## Table S3a from Van de Weyer et al. (2019), filtered for transcripts starting with ALYR or accession IDs, and retaining columns Transcript_ID to Arch_Type. Download members.tsv from the github repo and update accordingly
+fname_orthogroups_members <- "/path/to/orthogroups_members.csv" ## transcripts grouped by orthogroups as sorted by Van de Weyer et al. (2019). Download orthogroups_members.csv from the github repo and update accordingly
+fname_ploidy2_alyrata <- "/path/to/ploidy2_alyrata.tsv" ## download ploidy2_alyrata.tsv from the github repo and update accordingly
+
+
+thisDir <- function() {
+    cmdArgs <- commandArgs(trailingOnly = FALSE)
+    needle <- "--file="
+    match <- grep(needle, cmdArgs)
+                                        # Rscript
+    if (length(match) > 0) {
+        fname <- normalizePath(sub(needle, "", cmdArgs[match]))
+    }
+                                        # 'source'd via R console
+    else {
+        fname <- normalizePath(sys.frames()[[1]]$ofile)
+    }
+    return(str_extract(fname, "^.+?(?=[^/]+?$)"))
+}
+
+source(paste0(thisDir(), "str_manip.R"))
+
 
 ## collapse clusters
 collapse_clusters <- function(df, cluster_colname = "cluster", output_colname = "cluster",
@@ -34,7 +62,7 @@ g_legend<-function(a.gplot){
 
 ## make plot location
 make_plot_loc <- function(s){
-    return(paste0("/home/rachelle/cey/hap_tags/results/nlr165/plots_final/", s))
+    return(paste0(dir_output, "/", s))
 }
 
 ## get sequences that are identical across a contiguous stretch
@@ -106,11 +134,11 @@ make_tree_nolab <- function(d, c, exclude = c(), g = c(), group_name = '', dist 
                             bootstrap_legend_pos = "bottom", ...){ ## h1/2 for highlights
     arbitrary_args_sink <- list(...)
     ## get tree
-    t_fname <- paste0("/home/rachelle/cey/hap_tags/results/nlr165/tree/nlr165_col0-AL70-Alyrata_",
+    t_fname <- paste0(dir_results, "/tree/nlr164_col0-AL70-Alyrata_",
                       d,"_mafft_ML.nwk")
     t <- read.tree(file = t_fname)
     ## get reference names
-    all_ref_leaves <- c(names(readDNAStringSet(paste0("/home/rachelle/cey/hap_tags/results/nlr165/domain_seq/nlr165_", d, "_ref_CDS_complete.fasta"))), names(readDNAStringSet(paste0("/home/rachelle/cey/hap_tags/results/nlr165/domain_seq/nlr165_", d, "_6909pred_ref_CDS_complete.fasta"))))
+    all_ref_leaves <- c(names(readDNAStringSet(paste0(dir_results, "/domain_seq/nlr164_", d, "_ref_CDS_complete.fasta"))), names(readDNAStringSet(paste0(dir_results, "/domain_seq/nlr164_", d, "_6909pred_ref_CDS_complete.fasta"))))
     ## get data of predicted gene ids
     tmp_dat_pred <- dat_pred %>% dplyr::filter(domain == d)
     tmp_dat_pred_araly <- dat_pred_araly %>% filter(domain == d)
@@ -233,7 +261,7 @@ make_tree_nolab <- function(d, c, exclude = c(), g = c(), group_name = '', dist 
             dplyr::filter(gene %in% g) %>% pull(seq_id) %>% as.character()
         g_leaves <- c(al_leaves, araly_leaves, ref_leaves)
         ## get inter-leaf distance data
-        fname <- paste0("/home/rachelle/cey/hap_tags/results/nlr165/seq_distances/nlr165_NB-ARC_",
+        fname <- paste0(dir_results, "/seq_distances/nlr164_NB-ARC_",
                         c, "_distances.tsv")
         dat_dists <- read.table(fname, sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
             left_join(dat_pred %>% dplyr::select(contig, gene), by = c("seqa" = "contig")) %>%
@@ -274,10 +302,8 @@ ggsave_2s <- function(p, fname, h, s, ...){ggsave(make_plot_loc(fname), p, heigh
 ##########################
 
 ## accession information
-## acc_exclude <- c("7063", "7167", "7186_2", "7373", "8304", "9555", "9598", "9658", "9905", "9911")
-## acc_include <- read.table("/home/rachelle/data/AnnaLena/accID_AL70.tsv", sep = '\t', header = TRUE)$accID
-acc_relict <- read.table("/home/rachelle/data/AnnaLena/accID_relict.tsv", sep = '\t', header = FALSE)[,1]
-acc_map <- read.table("/home/rachelle/data/AnnaLena/accID_AL70.tsv",
+acc_relict <- read.table("/path/to/accID_relict.tsv", sep = '\t', header = FALSE)[,1] ## update accordingly with path to accID_relict.tsv clone from the repo
+acc_map <- read.table(fname_table_s11,
                       sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
     mutate(accID = as.character(accID), accID_old = as.character(accID_old),
            relict = sapply(accID, function(x){if(x %in% acc_relict){'y'}else{'n'}}),
@@ -285,15 +311,15 @@ acc_map <- read.table("/home/rachelle/data/AnnaLena/accID_AL70.tsv",
            longitude = str_split(longitude, '/') %>% lapply(as.numeric) %>% lapply(mean) %>% unlist,
            altitude = str_split(altitude, '/') %>% lapply(as.numeric) %>% lapply(mean) %>% unlist)
 ## coordinates
-acc1135 <- read.table("/home/rachelle/data/1001genomes/1135acc.csv", sep=',', header=T) %>%
+acc1135 <- read.table(fname_acc_1135, sep=',', header=T) %>%
     mutate(accID = as.character(tg_ecotypeid)) %>% dplyr::select(c(accID, latitude, longitude))
-accLegacy <- read.table("/home/rachelle/data/1001genomes/383Legacy.tsv", sep='\t', header=T) %>%
+accLegacy <- read.table(fname_acc_legacy, sep='\t', header=T) %>%
     mutate(accID = as.character(Accession.ID), latitude = Lat, longitude = NA) %>%
     dplyr::select(accID, longitude, latitude)
 accCoord <- rbind(acc1135, accLegacy %>% filter(! accID %in% acc1135$accID)) ## only acc1135 has longitude data
 
 ## genes
-dat_vdw_arch <- read.table("/home/rachelle/data/AnnaLena/vdw_arch.tsv",
+dat_vdw_arch <- read.table(fname_vdw_arch,
                            sep = '\t', stringsAsFactors = FALSE, header = TRUE) %>%
     tidyr::separate_rows(Transcript, sep = ';') %>%
     dplyr::filter(str_detect(Transcript, "AT\\dG\\d")) %>%
@@ -302,7 +328,7 @@ dat_vdw_arch <- read.table("/home/rachelle/data/AnnaLena/vdw_arch.tsv",
                   TIR = str_detect(Subclass, 'T'),
                   CC = str_detect(Subclass, 'C'),
                   RPW8 = str_detect(Subclass, 'R')) ## integrate architecture info with genes
-genes <- read.table("/home/rachelle/cey/hap_tags/results/nlr165/nlr165_final_wPred_newClust.tsv",
+genes <- read.table(paste0(dir_results, "/nlr164_final_wPred_newClust.tsv"),
                     sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
     left_join(dat_vdw_arch %>% dplyr::select(gene, TIR, CC, RPW8), by = "gene")
 
@@ -348,8 +374,8 @@ domains <- c("TIR", "NB-ARC")
 domain_count <- list()
 genes_misassigned <- list()
 for (d in domains){
-    ## tmp_seqs_f <- paste0("/home/rachelle/cey/hap_tags/results/nlr165/nlr165_col0_", d, ".fasta")
-    tmp_seqs_f <- paste0("/home/rachelle/cey/hap_tags/results/nlr165/domain_seq/nlr165_", d, "_ref_CDS_complete.fasta")
+    ## tmp_seqs_f <- paste0(dir_results, "/nlr164_col0_", d, ".fasta")
+    tmp_seqs_f <- paste0(dir_results, "/nlr164/domain_seq/nlr164_", d, "_ref_CDS_complete.fasta")
     tmp_seqs_dat <- readDNAStringSet(tmp_seqs_f)
     ## identify genes with anomalous NB-ARC count (!= 1)
     tmp_domain_count <- data.frame(seqid = names(tmp_seqs_dat)) %>%
@@ -375,7 +401,7 @@ genes_misassigned[["NB-ARC"]] <- list.append(genes_misassigned[["NB-ARC"]], c("A
 ############################
 
 ## get predicted gene identity data
-dat_pred_raw <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/predicted_identity", pattern="nlr165_AL70", full.names=TRUE), fread, sep='\t')), stringsAsFactors=FALSE) %>%
+dat_pred_raw <- as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/predicted_identity"), pattern="nlr164_AL70", full.names=TRUE), fread, sep='\t')), stringsAsFactors=FALSE) %>%
     mutate(domainId = domain,
            accID = sapply(contig, function(x){unlist(strsplit(x, split="\\|"))[[2]]}),
            domain = sapply(contig, function(x){unlist(strsplit(x, split="\\|"))[[3]]})) %>%
@@ -406,7 +432,7 @@ dat_pred_genes <- rbind(dat_pred %>% dplyr::select(accID, domain, gene) %>% filt
     distinct() %>% dplyr::select(accID, relict, domain, cluster_type, cluster, gene, original.bait, count)
 
 ## ## TABLES S8 S9 (PREDICTED_NB-ARC_GENE) (PREDICTED_TIR_GENE)
-## write.table(dat_pred_genes, "/home/rachelle/cey/hap_tags/results/nlr165/tables/nlr165_genes_accs.tsv",
+## write.table(dat_pred_genes, paste0(dir_results, "/tables/nlr164_genes_accs.tsv"),
 ##             sep = '\t', row.names = FALSE, quote = FALSE)
 
 ## SUMMARISE predicted AL70 genes
@@ -449,7 +475,7 @@ dat_pred_sum <- dat_pred_sum %>% dplyr::select(-c(total)) %>%
 ## ## TABLE S3 (PREDICTED_REPERTOIRE_SIZE)
 ## write.table(dat_pred_sum %>%
 ##             select(accID,relict,domain,cluster,cluster_type,count,total,total_cluster,total_major_cluster),
-##             "/home/rachelle/cey/hap_tags/results/nlr165/tables/predicted_AL70_summary.tsv",
+##             paste0(dir_results, "/tables/predicted_AL70_summary.tsv"),
 ##             sep = '\t', quote = FALSE, row.names = FALSE)
 
 
@@ -460,7 +486,7 @@ dat_pred_sum <- dat_pred_sum %>% dplyr::select(-c(total)) %>%
 ###################################
 
 ## ylg-only dataset
-dat_pred_araly_raw <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/predicted_identity", pattern="nlr165_Alyrata", full.names=TRUE), fread, sep='\t')), stringsAsFactors=FALSE) %>%
+dat_pred_araly_raw <- as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/predicted_identity"), pattern="nlr164_Alyrata", full.names=TRUE), fread, sep='\t')), stringsAsFactors=FALSE) %>%
     mutate(domainId = domain,
            domain = sapply(ref_name, function(x){split_extract(x, '\\|', 5)}),
            source = sapply(contig, function(x){if(str_detect(x, "^_R_")){x <- split_extract(x, "R_", 2)}
@@ -498,7 +524,7 @@ dat_pred_araly_genes <- rbind(dat_pred_araly %>% dplyr::select(domain, gene) %>%
 ##             left_join(genes %>% select(gene, cluster, cluster_type), by = "gene") %>%
 ##             select(source, domain, num, cluster_type, cluster, gene) %>%
 ##             dplyr::rename(araly_protein_ID = source, domain_order = num, Col0_gene = gene),
-##             "/home/rachelle/cey/hap_tags/results/nlr165/tables/nlr165_genes_Araly.tsv",
+##             paste0(dir_results, "/tables/nlr164_genes_Araly.tsv"),
 ##             sep = '\t', row.names = FALSE, quote = FALSE)
 
 
@@ -509,8 +535,8 @@ dat_pred_araly_genes <- rbind(dat_pred_araly %>% dplyr::select(domain, gene) %>%
 ##############################
 
 ## pi: nucleotide diversity
-pi_f_nbs <- "/home/rachelle/cey/hap_tags/results/nlr165/seq_diversity/nlr165_AL70_NB-ARC_gapsExc_CDSonly_pi.tsv"
-pi_f_tir <- "/home/rachelle/cey/hap_tags/results/nlr165/seq_diversity/nlr165_AL70_TIR_gapsExc_CDSonly_pi.tsv"
+pi_f_nbs <- paste0(dir_results, "/seq_diversity/nlr164_AL70_NB-ARC_gapsExc_CDSonly_pi.tsv")
+pi_f_tir <- paste0(dir_results, "/seq_diversity/nlr164_AL70_TIR_gapsExc_CDSonly_pi.tsv"
 dat_pi <- rbind(read.table(pi_f_nbs, header = TRUE, stringsAsFactors = FALSE, sep = '\t') %>%
                 dplyr::select(-c(cluster)) %>%
                 left_join(genes %>% dplyr::select(gene, cluster), by = "gene") %>%
@@ -530,7 +556,7 @@ f_src_tmp <- function(s){
     if (str_detect(s, 'Col-0_ref')){'ref'} else if (str_detect(s, '.tig')){'vdw'} else {'araly'}}
 tmp_arathly_pred <- rbind(dat_pred %>% dplyr::select(contig, gene, domainId, cluster),
                           dat_pred_araly %>% dplyr::select(contig, gene, domainId, cluster))
-dat_dists <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/seq_distances", pattern="nlr165_NB-ARC.+distances.tsv", full.names=TRUE), fread, sep = '\t')),
+dat_dists <- as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/seq_distances"), pattern="nlr164_NB-ARC.+distances.tsv", full.names=TRUE), fread, sep = '\t')),
                            stringsAsFactors = FALSE, fill = TRUE) %>%
     left_join(tmp_arathly_pred, by = c("seqa" = "contig")) %>%
     dplyr::rename(genea = gene, domainIda = domainId, clustera = cluster) %>%
@@ -545,20 +571,20 @@ dat_dists <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/
 ##  AL70 domains popgenstats  ##
 ################################
 
-dat_pops <- rbind(read.table("/home/rachelle/cey/hap_tags/popg_test/nlr165_AL70_NB-ARC_CDSonly_stats.tsv",
+dat_pops <- rbind(read.table(paste0(dir_results, "/popg_test/nlr164_AL70_NB-ARC_CDSonly_stats.tsv"),
                              sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
                   mutate(region = "CDS"),
-                  read.table("/home/rachelle/cey/hap_tags/popg_test/nlr165_AL70_NB-ARC_intrononly_stats.tsv",
+                  read.table(paste0(dir_results, "/popg_test/nlr164_AL70_NB-ARC_intrononly_stats.tsv"),
                              sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
                   mutate(region = "noncoding"),
-                  read.table("/home/rachelle/cey/hap_tags/popg_test/nlr165_AL70_NB-ARC_CDScomplete_stats.tsv",
+                  read.table(paste0(dir_results, "/popg_test/nlr164_AL70_NB-ARC_CDScomplete_stats.tsv"),
                              sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
                   mutate(region = "complete")) %>%
     left_join(genes, by = c("gene"))
 dat_pops_gathered <- dat_pops %>%
     gather(test, value, nucleotide_diversity:wattersons_theta)
 
-dat_pops_clade <- read.table("/home/rachelle/cey/hap_tags/popg_test/nlr165_NB-ARC_CDSonly_clade_stats.tsv",
+dat_pops_clade <- read.table(paste0(dir_results, "/popg_test/nlr164_NB-ARC_CDSonly_clade_stats.tsv"),
                              sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
     mutate(region = "CDS", cluster = group)
 dat_pops_clade_gathered <- dat_pops_clade %>%
@@ -575,18 +601,18 @@ dat_pops_clade <- dat_pops_clade_gathered %>%
 ##  Van de Weyer et al.  ##
 ###########################
 
-dat_vdw <- read.table("/home/rachelle/google-drive/NUS/CEY/Papers/panNLRome/members.tsv",
+dat_vdw <- read.table(fname_members,
                       header = TRUE, stringsAsFactors = FALSE) %>%
     mutate(accID_old = sapply(Gene_ID, gen_split_extract('\\|', 1)),
            gene = sapply(Gene_ID, gen_split_extract('\\|', 2))) %>%
     filter(accID_old != 7063) %>%
-    left_join(read.table("/home/rachelle/data/AnnaLena/accID_AL70.tsv",
+    left_join(read.table(fname_table_s11,
                          sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
               mutate(accID_old = as.character(accID_old)), by = c("accID_old")) %>%
     mutate(accID = as.character(accID))
 dat_vdw_nb <- dat_vdw[sapply(dat_vdw$Architecture, function(x){"NB" %in% unlist(str_split(x, ','))}),]
 
-dat_vdw_orth_raw <- read.table("/home/rachelle/google-drive/NUS/CEY/Papers/panNLRome/orthogroups_members.csv",
+dat_vdw_orth_raw <- read.table(fname_orthogroups_members,
                                header = FALSE, stringsAsFactors = FALSE)[,1]
 dat_vdw_orth <- data.frame(seqid = as.character(), accID_old = as.character(), ogNum = as.character())
 for (i in 1:length(dat_vdw_orth_raw)){
@@ -597,7 +623,7 @@ for (i in 1:length(dat_vdw_orth_raw)){
     dat_vdw_orth <- rbind(dat_vdw_orth, tmp)
 }
 dat_vdw_orth <- dat_vdw_orth %>% mutate(seq = sapply(seqid, gen_split_extract('\\|', 2))) %>%
-    left_join(read.table("/home/rachelle/data/AnnaLena/accID_AL70.tsv",
+    left_join(read.table(fname_table_s11,
                          sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>%
               mutate(accID_old = as.character(accID_old)), by = c("accID_old")) %>%
     mutate(accID = as.character(accID), gene = sapply(seq, gen_split_extract('\\.', 1)))
@@ -628,7 +654,7 @@ dat_vdw_nb_sum_canonOG <- dat_vdw_orth %>% filter(! str_detect(seqid, "6909\\AT"
 ## combine both data to be plotted together    
 dat_combined <- rbind(cbind(dat_nb, source = c("BLAST pipeline")),
                       cbind(dat_vdw_nb_sum_all, source = c("VdW")),
-                      cbind(dat_vdw_nb_sum_canonOG, source=c("VdW nlr165OG")))%>%
+                      cbind(dat_vdw_nb_sum_canonOG, source=c("VdW nlr164OG")))%>%
     mutate(accID = as.character(accID)) %>%
     left_join(acc_map %>% dplyr::select(accID, accessions))
 tmp_src <- dat_combined$source
@@ -836,11 +862,11 @@ for (d in unique(dat_pred_sum$domain)){
                                          expected = mi$expected, sd = mi$sd, p.value = mi$p.value))        
     }
     morani.geography[[d]] <- d_dat
-    write.table(d_dat, paste0("/home/rachelle/cey/hap_tags/results/nlr165/tables/nlr165_AL70_MoranI_geography_",
+    write.table(d_dat, paste0(dir_results, "/tables/nlr164_AL70_MoranI_geography_",
                               d, ".txt"), quote = FALSE, sep = '\t', row.names = FALSE)
 }
 
-geno <- read.table("/home/rachelle/cey/hap_tags/results/hierarchy/al70_acc_new_pairwiseSNPs_cAcc_upperTri.tsv",
+geno <- read.table(paste0(dir_results, "/hierarchy/al70_acc_new_pairwiseSNPs_cAcc_upperTri.tsv"),
                    header = FALSE, fill = TRUE, sep = '\t', row.names = 1)
 genos <- rownames(geno)
 geno <- geno %>% arrange(-row_number())
@@ -870,7 +896,7 @@ for (d in unique(dat_pred_sum$domain)){
                                          expected = mi$expected, sd = mi$sd, p.value = mi$p.value))        
     }
     morani.hierarchy[[d]] <- d_dat
-    write.table(d_dat, paste0("/home/rachelle/cey/hap_tags/results/nlr165/tables/nlr165_AL70_MoranI_hierarchy_",
+    write.table(d_dat, paste0(dir_results, "/tables/nlr164_AL70_MoranI_hierarchy_",
                               d, ".txt"), quote = FALSE, sep = '\t', row.names = FALSE)
 }
 
@@ -886,7 +912,7 @@ acc_novikova <- read.table("/home/rachelle/data/Alyrata/Novikova_etal/ploidy2_al
     mutate(subspecies = str_extract(sample, "(?<=Alyrata)[^\\d]+"))
 
 ## Note that araly domainIds that were not found to be deleted or duplicated in other accessions (and thus did not have their nRD stats output by CNVnator) were assigned nRD of 1
-dat_araly_cnv <- read.table("/home/rachelle/cey/hap_tags/results/araly_cnv/aralyCNV_called_novikova14_NB-ARC_summary.tsv", header = TRUE, sep = '\t', stringsAsFactors = FALSE) %>%
+dat_araly_cnv <- read.table(paste0(dir_results, "/araly_cnv/aralyCNV_called_novikova14_NB-ARC_summary.tsv"), header = TRUE, sep = '\t', stringsAsFactors = FALSE) %>%
     dplyr::mutate(proteinId = as.character(proteinId), domainId = as.character(domainId)) %>%
     dplyr::mutate_all(~replace(., . == '', NA)) %>%
     tidyr::gather("cnv_type", "to_split", deletion:duplication) %>%
@@ -911,7 +937,7 @@ dat_araly_cnv <- read.table("/home/rachelle/cey/hap_tags/results/araly_cnv/araly
 ## write.table(dat_araly_cnv %>% dplyr::select(-c(cnv_type)) %>%
 ##             group_by(proteinId, domainId, cluster_type, cluster, gene, col0domainId, acc) %>%
 ##             summarise(meannRD = mean(nRD)) %>% ungroup() %>% spread(acc, meannRD),
-##             "/home/rachelle/cey/hap_tags/results/nlr165/tables/nlr165_domain_Araly_CNVnator_meannRD.tsv",
+##             paste0(dir_results, "/tables/nlr164_domain_Araly_CNVnator_meannRD.tsv"),
 ##             sep = '\t', quote = FALSE, row.names = FALSE)
 
 ## combine with Fig3
@@ -1405,7 +1431,7 @@ ggsave_1s(p6s, "FigS6.png", 60, 2, dpi = 300)
 ##   FOR RADIATION  ##
 ######################
 
-dat_bl <- read.table("/home/rachelle/cey/hap_tags/results/nlr165/branch_lengths/clade_stats.tsv",
+dat_bl <- read.table(paste0(dir_results, "/branch_lengths/clade_stats.tsv"),
                      header = TRUE, stringsAsFactors = FALSE, sep = '\t')
 
 library(ggrepel)
@@ -1414,8 +1440,8 @@ library(ggrepel)
 ## plot how different stats change after each longest branch is sequentially split
 library(data.table)
 ## get data
-dat_split_premerge <- rbind(read.table("/home/rachelle/cey/hap_tags/results/nlr165/branch_lengths/clade_split_longest_stats_mmsdNA_all.tsv", sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>% mutate(genes = c("root")),
-                            as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/branch_lengths", pattern="clade_split_longest_stats_mmsdNA_[tw]", full.names=TRUE), fread, sep='\t')),
+dat_split_premerge <- rbind(read.table(paste0(dir_results, "/branch_lengths/clade_split_longest_stats_mmsdNA_all.tsv"), sep = '\t', header = TRUE, stringsAsFactors = FALSE) %>% mutate(genes = c("root")),
+                            as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/branch_lengths"), pattern="clade_split_longest_stats_mmsdNA_[tw]", full.names=TRUE), fread, sep='\t')),
                                           stringsAsFactors=FALSE)) %>%
     mutate(abs_path = paste(type, group, genes, path, sep = ';'),
            last_path = str_extract(abs_path, "^.+(?=[;,][^;,]+$)"),
@@ -1692,9 +1718,9 @@ p_dm2_bs <- make_tree_nolab(d = "NB-ARC", c = "DM2_RPP1", only_arath = TRUE,
                             colour_bootstrap = TRUE)
 
 ## Fig. 6E (manual colouring of tips + AT5G48620 clades to accommodate paraphyly in radiation), S7C
-d4_20_tips <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/plots_final/Fig6_tips/AT5G48620", pattern="AT", full.names=TRUE), fread, sep='\t', header = FALSE), idcol = "origin"), stringsAsFactors=FALSE) %>% group_split(origin) %>% lapply(function(x){as.vector(x[,2]) %>% pull(V1)})
-d4_50_tips <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/plots_final/Fig6_tips", pattern="AT5G35450", full.names=TRUE), fread, sep='\t', header = FALSE)), stringsAsFactors=FALSE)[,1]
-d4_70_tips <- as.data.frame(rbindlist(lapply(list.files(path="/home/rachelle/cey/hap_tags/results/nlr165/plots_final/Fig6_tips", pattern="AT5G43470", full.names=TRUE), fread, sep='\t', header = FALSE)), stringsAsFactors=FALSE)[,1]
+d4_20_tips <- as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/plots_final/Fig6_tips/AT5G48620"), pattern="AT", full.names=TRUE), fread, sep='\t', header = FALSE), idcol = "origin"), stringsAsFactors=FALSE) %>% group_split(origin) %>% lapply(function(x){as.vector(x[,2]) %>% pull(V1)})
+d4_50_tips <- as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/plots_final/Fig6_tips"), pattern="AT5G35450", full.names=TRUE), fread, sep='\t', header = FALSE)), stringsAsFactors=FALSE)[,1]
+d4_70_tips <- as.data.frame(rbindlist(lapply(list.files(path=paste0(dir_results, "/plots_final/Fig6_tips"), pattern="AT5G43470", full.names=TRUE), fread, sep='\t', header = FALSE)), stringsAsFactors=FALSE)[,1]
 d4_20_single <- d4_20_tips[lapply(d4_20_tips, length) == 1]
 d4_20_multi <- d4_20_tips[lapply(d4_20_tips, length) > 1]
 d4_tips <- list(unlist(d4_20_tips), d4_50_tips, d4_70_tips) %>% unlist
@@ -1799,7 +1825,7 @@ for (c in (dat_pred_sum$cluster %>% unique)){
     glm_c_df <- rbind(glm_c_df, tmp_df)
 }
 ## write table
-write.table(glm_c_df, "/home/rachelle/cey/hap_tags/results/nlr165/tables/cluster_size_longlatalt.tsv",
+write.table(glm_c_df, paste0(dir_results, "/tables/cluster_size_longlatalt.tsv"),
             sep = '\t', row.names = FALSE, quote = FALSE)
 
 
@@ -1812,9 +1838,9 @@ write.table(glm_c_df, "/home/rachelle/cey/hap_tags/results/nlr165/tables/cluster
 ## RPS4 (paired NLRs) tree
 library(ape)
 d <- "NB-ARC"
-t_fname <- paste0("/home/rachelle/cey/hap_tags/results/nlr165/tree/nlr165_col0-AL70-Alyrata_",d,"_mafft_ML.nwk")
+t_fname <- paste0(dir_results, "/tree/nlr164_col0-AL70-Alyrata_",d,"_mafft_ML.nwk")
 t <- read.tree(file = t_fname)
-all_ref_leaves <- c(names(readDNAStringSet(paste0("/home/rachelle/cey/hap_tags/results/nlr165/domain_seq/nlr165_", d, "_ref_CDS_complete.fasta"))), names(readDNAStringSet(paste0("/home/rachelle/cey/hap_tags/results/nlr165/domain_seq/nlr165_", d, "_6909pred_ref_CDS_complete.fasta"))))
+all_ref_leaves <- c(names(readDNAStringSet(paste0(dir_results, "/domain_seq/nlr164_", d, "_ref_CDS_complete.fasta"))), names(readDNAStringSet(paste0(dir_results, "/domain_seq/nlr164_", d, "_6909pred_ref_CDS_complete.fasta"))))
 tmp_dat_pred <- dat_pred %>% filter(domain == d)
 tmp_dat_pred_araly <- dat_pred_araly %>% filter(domain == d)
 paired_c <- c("RPS4", "cAT2G17050", "cAT4G12010", "cAT4G36140", "CHS3", "LCD9", "RPP2", "TTR1")

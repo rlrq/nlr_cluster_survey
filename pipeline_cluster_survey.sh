@@ -247,7 +247,6 @@ Rscript -e "source('${scripts_dir}/completeness.R'); summarise_pred_genes('${ara
 ##  W A.LYRATA SEQS  ##
 #######################
 
-# accs_map=/mnt/chaelab/rachelle/data/anna_lena/accID_AL70.tsv
 alignment_in_dir="${results_dir}/alignment_input"
 alignment_dir="${results_dir}/alignment"
 tree_dir="${results_dir}/tree"
