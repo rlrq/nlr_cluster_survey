@@ -1,6 +1,6 @@
 # nlr_cluster_survey
 
-(Note that the files currently in the repo reproduce the analysis in the manuscript before major revisions. Final scripts are to be uploaded in due time.) (Now with CNVnator analysis for A. lyrata.)
+~~(Note that the files currently in the repo reproduce the analysis in the manuscript before major revisions. Final scripts are to be uploaded in due time.) (Now with CNVnator analysis for A. lyrata.)~~ The scripts should be final, but human error may mean that something could have been mistakenly left out (or in) during the reorganisation of code for readability.
 
 pipeline_cluster_survey.sh details the analysis pipeline up to but not including visualisation steps. Miscellaneous scripts required are included in the 'scripts' folder, and the directory structure should be preserved.
 
