@@ -283,3 +283,18 @@ def remove_incomplete_pos(seqs, empty_char = '-', write = False,
             return output_dict
     else:
         return output
+
+def unknown_codon_to_gap(s, **kwargs):
+    """
+    Takes dictionary or string or SeqRecord of DNA sequences, assumes only coding sequences in +1 frame
+    Converts all ambiguous codons (e.g. TG-) to gaps (TG- > ---)
+    """
+    unknown_to_gap = lambda seq: ''.join([str(codon) if not '-' in codon else '---'
+                                          for codon in [seq[i:i+3] for i in range(0, len(seq), 3)]])
+    if isinstance(s, dict):
+        output = {}
+        for seq_id, seq in s.items():
+            output[seq_id] = unknown_to_gap(seq)
+        return output
+    else:
+        return unknown_to_gap(s)

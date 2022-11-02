@@ -432,3 +432,17 @@ done
 cnv_nbs_summary=${cnvnator_dir}/aralyCNV_called_novikova14_NB-ARC_summary.tsv
 ## this one separates NB-ARC domains even when in same gene
 python3 -c "import re; samples = ['$(echo ${sras[@]} | sed 's/ /\x27,\x27/g')']; gff_bed = [x[:-1].split('\t') for x in open('${cnv_nbs_bed}', 'r').readlines()]; stats_d = {domain: {cnv: set(tuple(x) for x in gff_bed if domain == x[-1] and x[3] == cnv) for cnv in ['deletion', 'duplication']} for domain in [x[-1] for x in gff_bed]}; [print(k, '\tdeletion:', len(set(x[11] for x in v['deletion'])), '\tduplication:', len(set(x[11] for x in v['duplication']))) for k, v in stats_d.items()]; output = [['proteinId', 'domainId', 'deletion', 'duplication']] + [[re.search('^\d+', k).group(0), k, ';'.join(set(','.join([x[11], x[5]]) for x in v['deletion'])), ';'.join(set(','.join([x[11], x[5]]) for x in v['duplication']))] for k, v in stats_d.items()]; f = open('${cnv_nbs_summary}', 'w+'); f.write('\n'.join(['\t'.join(x) for x in output])); f.close()"
+
+
+###################
+##  POPGENSTATS  ##
+###################
+
+## popgenstats (nucleotide diversity, tajima's D, watterson's theta)
+popg_dir="${results_dir}/popg_test"
+mkdir -p "${popg_dir}"
+python3 -c "import sys; sys.path.append('${scripts_dir}'); from seq_conservation import *; dstats_mk, pgstats_mk = popgenome_pi('NB-ARC', fout_dir = '${popg_dir}', cds_only = False, make_seq_fname = (lambda domain: f'${alignment_dir}/nlr164_col0-AL70-Alyrata_{domain}_mafft.fa'), prefix = 'nlr164_AL70', make_pred_fname = (lambda domain: f'${pred_dir}/nlr164_AL70_{domain}_predictedIdentity.txt'), make_tree_fname = (lambda domain: f'${tree_dir}/nlr164_col0-AL70-Alyrata_{domain}_mafft_ML.nwk'), make_pred_aray_fname = (lambda domain: f'${pred_dir}/nlr164_Alyrata_{domain}_predictedIdentity.txt')); write_pgstats_mk(dstats_mk, pgstats_mk, '${popg_dir}', 'nlr164_AL70', 'NB-ARC', cds_only = True, intron_only = False); write_pgstats_mk(dstats_mk, pgstats_mk, '${popg_dir}', 'nlr164_AL70', 'NB-ARC', cds_only = False, intron_only = True); write_pgstats_mk(dstats_mk, pgstats_mk, '${popg_dir}', 'nlr164_AL70', 'NB-ARC', cds_only = False, intron_only = False)"
+
+bl_dir="${results_dir}/branch_lengths"
+mkdir -p "${bl_dir}" "${popg_dir}/clades"
+## see seq_conservation_byFidelity.py for stats of selected clades + splitting of clades by longest branch (make sure to update directory variables at top of file)
